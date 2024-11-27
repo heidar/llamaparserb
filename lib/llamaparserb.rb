@@ -1,0 +1,242 @@
+# frozen_string_literal: true
+
+require_relative "llamaparserb/version"
+require "faraday"
+require "faraday/multipart"
+require "json"
+require "mime/types"
+require "uri"
+require "async"
+require "logger"
+
+module Llamaparserb
+  class Error < StandardError; end
+
+  class Client
+    DEFAULT_BASE_URL = "https://api.cloud.llamaindex.ai/api/parsing"
+    DEFAULT_SEPARATOR = "\n---\n"
+    VALID_STATUSES = ["SUCCESS", "COMPLETED"].freeze
+    SUPPORTED_FILE_TYPES = [
+      ".pdf", ".602", ".abw", ".cgm", ".cwk", ".doc", ".docx", ".docm", ".dot",
+      ".dotm", ".hwp", ".key", ".lwp", ".mw", ".mcw", ".pages", ".pbd", ".ppt",
+      ".pptm", ".pptx", ".pot", ".potm", ".potx", ".rtf", ".sda", ".sdd", ".sdp",
+      ".sdw", ".sgl", ".sti", ".sxi", ".sxw", ".stw", ".sxg", ".txt", ".uof",
+      ".uop", ".uot", ".vor", ".wpd", ".wps", ".xml", ".zabw", ".epub", ".jpg",
+      ".jpeg", ".png", ".gif", ".bmp", ".svg", ".tiff", ".webp", ".htm", ".html",
+      ".xlsx", ".xls", ".xlsm", ".xlsb", ".xlw", ".csv", ".dif", ".sylk", ".slk",
+      ".prn", ".numbers", ".et", ".ods", ".fods", ".uos1", ".uos2", ".dbf",
+      ".wk1", ".wk2", ".wk3", ".wk4", ".wks", ".123", ".wq1", ".wq2", ".wb1",
+      ".wb2", ".wb3", ".qpw", ".xlr", ".eth", ".tsv"
+    ].freeze
+
+    attr_reader :api_key, :base_url, :options, :logger
+
+    def initialize(api_key = nil, options = {})
+      @api_key = api_key || ENV["LLAMA_CLOUD_API_KEY"]
+      raise Error, "API key is required" unless @api_key
+
+      @base_url = options[:base_url] || ENV["LLAMA_CLOUD_BASE_URL"] || DEFAULT_BASE_URL
+      @options = default_options.merge(options)
+      @logger = options[:logger] || default_logger
+      @connection = build_connection
+    end
+
+    def parse_file(file_path)
+      job_id = create_job(file_path)
+      log "Started parsing file under job_id #{job_id}", :info
+
+      wait_for_completion(job_id)
+
+      result = get_result(job_id)
+      log "Successfully retrieved result", :info
+      result
+    rescue => e
+      handle_error(e, file_path)
+    end
+
+    private
+
+    def default_options
+      {
+        result_type: :text,
+        num_workers: 4,
+        check_interval: 1,
+        max_timeout: 2000,
+        verbose: true,
+        show_progress: true,
+        language: :en,
+        parsing_instruction: "",
+        skip_diagonal_text: false,
+        invalidate_cache: false,
+        do_not_cache: false,
+        fast_mode: false,
+        premium_mode: false,
+        continuous_mode: false,
+        do_not_unroll_columns: false,
+        page_separator: nil,
+        page_prefix: nil,
+        page_suffix: nil,
+        gpt4o_mode: false,
+        gpt4o_api_key: nil,
+        guess_xlsx_sheet_names: false,
+        bounding_box: nil,
+        target_pages: nil,
+        ignore_errors: true,
+        split_by_page: true
+      }
+    end
+
+    def default_logger
+      logger = Logger.new($stdout)
+      logger.level = @options[:verbose] ? Logger::DEBUG : Logger::INFO
+      logger.formatter = proc do |severity, datetime, progname, msg|
+        "#{msg}\n"
+      end
+      logger
+    end
+
+    def log(message, level = :debug)
+      return unless @options[:verbose]
+      case level
+      when :info
+        logger.info(message)
+      when :warn
+        logger.warn(message)
+      when :error
+        logger.error(message)
+      else
+        logger.debug(message)
+      end
+    end
+
+    def wait_for_completion(job_id)
+      start_time = Time.now
+
+      loop do
+        sleep(@options[:check_interval])
+        response = get_job_status(job_id)
+        log "Status: #{response["status"]}", :debug
+
+        check_timeout(start_time, job_id)
+        break if job_completed?(response)
+        handle_error_status(response, job_id)
+      end
+    end
+
+    def job_completed?(response)
+      VALID_STATUSES.include?(response["status"])
+    end
+
+    def check_timeout(start_time, job_id)
+      return unless Time.now - start_time > @options[:max_timeout]
+      raise Error, "Job #{job_id} timed out after #{@options[:max_timeout]} seconds"
+    end
+
+    def handle_error_status(response, job_id)
+      if response["status"] == "ERROR"
+        error_code = response["error_code"] || "No error code found"
+        error_message = response["error_message"] || "No error message found"
+        raise Error, "Job failed: #{error_code} - #{error_message}"
+      end
+
+      unless response["status"] == "PENDING"
+        raise Error, "Unexpected status: #{response["status"]}"
+      end
+    end
+
+    def handle_error(error, file_path)
+      if @options[:ignore_errors]
+        log "Error while parsing file '#{file_path}': #{error.message}", :error
+        nil
+      else
+        raise error
+      end
+    end
+
+    def build_connection
+      Faraday.new(url: base_url) do |f|
+        f.request :multipart
+        f.request :json
+        f.response :json
+        f.response :raise_error
+        f.adapter Faraday.default_adapter
+      end
+    end
+
+    def create_job(file_path)
+      validate_file_type!(file_path)
+
+      file = Faraday::Multipart::FilePart.new(
+        file_path,
+        detect_content_type(file_path)
+      )
+
+      response = @connection.post("upload") do |req|
+        req.headers["Authorization"] = "Bearer #{api_key}"
+        req.body = upload_params(file)
+      end
+
+      response.body["id"]
+    end
+
+    def upload_params(file)
+      {
+        file: file,
+        language: @options[:language].to_s,
+        parsing_instruction: @options[:parsing_instruction],
+        invalidate_cache: @options[:invalidate_cache],
+        skip_diagonal_text: @options[:skip_diagonal_text],
+        do_not_cache: @options[:do_not_cache],
+        fast_mode: @options[:fast_mode],
+        premium_mode: @options[:premium_mode],
+        continuous_mode: @options[:continuous_mode],
+        do_not_unroll_columns: @options[:do_not_unroll_columns],
+        gpt4o_mode: @options[:gpt4o_mode],
+        gpt4o_api_key: @options[:gpt4o_api_key],
+        from_ruby_package: true
+      }.compact
+    end
+
+    def get_job_status(job_id)
+      response = @connection.get("job/#{job_id}") do |req|
+        req.headers["Authorization"] = "Bearer #{api_key}"
+      end
+
+      response.body
+    end
+
+    def get_result(job_id)
+      result_type = @options[:result_type].to_s
+      response = @connection.get("job/#{job_id}/result/#{result_type}") do |req|
+        req.headers["Authorization"] = "Bearer #{api_key}"
+      end
+
+      log "Result type: #{result_type}", :info
+      log "Raw response body: #{response.body.inspect}", :info
+
+      extract_content(response.body, result_type)
+    end
+
+    def extract_content(body, result_type)
+      content = if body.is_a?(Hash)
+        body[result_type] || body["content"]
+      else
+        body
+      end
+
+      log "Warning: No content found in response", :warn if content.nil?
+      content
+    end
+
+    def detect_content_type(filename)
+      MIME::Types.type_for(filename).first&.content_type || "application/octet-stream"
+    end
+
+    def validate_file_type!(file_path)
+      extension = File.extname(file_path).downcase
+      unless SUPPORTED_FILE_TYPES.include?(extension)
+        raise Error, "Unsupported file type: #{extension}. Supported types: #{SUPPORTED_FILE_TYPES.join(", ")}"
+      end
+    end
+  end
+end
