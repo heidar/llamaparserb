@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2024-11-28
+### Fixed
+- Fix issue with handling file path
+
 ## [0.2.1] - 2024-11-28
 ### Fixed
 - Fix parse_file to handle files that are not on the local filesystem
