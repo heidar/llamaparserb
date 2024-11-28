@@ -45,11 +45,16 @@ module Llamaparserb
     def parse_file(file_input, file_type = nil)
       case file_input
       when String
-        # Treat as file path
-        job_id = create_job_from_path(file_input)
-        log "Started parsing file under job_id #{job_id}", :info
+        if file_type
+          job_id = create_job_from_io(file_input, file_type)
+          log "Started parsing binary data under job_id #{job_id}", :info
+        elsif File.exist?(file_input)
+          job_id = create_job_from_path(file_input)
+          log "Started parsing file under job_id #{job_id}", :info
+        else
+          raise Error, "file_type parameter is required for binary string input"
+        end
       when IO, StringIO, Tempfile
-        # Treat as file object
         raise Error, "file_type parameter is required for IO objects" unless file_type
         job_id = create_job_from_io(file_input, file_type)
         log "Started parsing in-memory file under job_id #{job_id}", :info
@@ -63,6 +68,8 @@ module Llamaparserb
       result
     rescue => e
       handle_error(e, file_input)
+      raise unless @options[:ignore_errors]
+      nil
     end
 
     private
@@ -108,15 +115,19 @@ module Llamaparserb
 
     def log(message, level = :debug)
       return unless @options[:verbose]
+
+      # Convert message to string and force UTF-8 encoding, replacing invalid characters
+      safe_message = message.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
+
       case level
       when :info
-        logger.info(message)
+        logger.info(safe_message)
       when :warn
-        logger.warn(message)
+        logger.warn(safe_message)
       when :error
-        logger.error(message)
+        logger.error(safe_message)
       else
-        logger.debug(message)
+        logger.debug(safe_message)
       end
     end
 
@@ -157,7 +168,13 @@ module Llamaparserb
 
     def handle_error(error, file_input)
       if @options[:ignore_errors]
-        log "Error while parsing file '#{file_input}'", :error
+        safe_message = if file_input.is_a?(String) && !File.exist?(file_input)
+          "binary data"
+        else
+          file_input.class.to_s
+        end
+
+        log "Error while parsing file (#{safe_message}): #{error.message}", :error
         nil
       else
         raise error
@@ -183,15 +200,21 @@ module Llamaparserb
       create_job(file)
     end
 
-    def create_job_from_io(io, file_type)
-      # Ensure file_type starts with a dot
+    def create_job_from_io(io_or_string, file_type)
       file_type = ".#{file_type}" unless file_type.start_with?(".")
       validate_file_type!(file_type)
 
       temp_file = Tempfile.new(["upload", file_type])
       temp_file.binmode
-      io.rewind
-      temp_file.write(io.read)
+
+      case io_or_string
+      when String
+        temp_file.write(io_or_string.force_encoding("ASCII-8BIT"))
+      else
+        io_or_string.rewind if io_or_string.respond_to?(:rewind)
+        temp_file.write(io_or_string.read.force_encoding("ASCII-8BIT"))
+      end
+
       temp_file.rewind
 
       file = Faraday::Multipart::FilePart.new(
@@ -267,7 +290,12 @@ module Llamaparserb
     end
 
     def validate_file_type!(file_path)
-      extension = File.extname(file_path).downcase
+      extension = if file_path.start_with?(".")
+        file_path
+      else
+        File.extname(file_path).downcase
+      end
+
       unless SUPPORTED_FILE_TYPES.include?(extension)
         raise Error, "Unsupported file type: #{extension}. Supported types: #{SUPPORTED_FILE_TYPES.join(", ")}"
       end
