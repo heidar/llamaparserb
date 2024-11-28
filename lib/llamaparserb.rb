@@ -240,7 +240,7 @@ module Llamaparserb
 
       response = @connection.post("upload") do |req|
         req.headers["Authorization"] = "Bearer #{api_key}"
-        req.body = {file: file}
+        req.body = upload_params(file)
       end
 
       response.body["id"]
@@ -269,30 +269,29 @@ module Llamaparserb
         premium_mode: @options[:premium_mode],
         continuous_mode: @options[:continuous_mode],
         do_not_unroll_columns: @options[:do_not_unroll_columns],
+        page_separator: @options[:page_separator],
+        page_prefix: @options[:page_prefix],
+        page_suffix: @options[:page_suffix],
+        target_pages: @options[:target_pages],
+        bounding_box: @options[:bounding_box],
+        disable_ocr: @options[:disable_ocr],
+        take_screenshot: @options[:take_screenshot],
         gpt4o_mode: @options[:gpt4o_mode],
         gpt4o_api_key: @options[:gpt4o_api_key],
-        vendor_multimodal_api_key: @options[:vendor_multimodal_api_key],
-        use_vendor_multimodal_model: @options[:use_vendor_multimodal_model],
-        vendor_multimodal_model_name: @options[:vendor_multimodal_model_name],
-        take_screenshot: @options[:take_screenshot],
-        disable_ocr: @options[:disable_ocr],
         guess_xlsx_sheet_names: @options[:guess_xlsx_sheet_names],
         is_formatting_instruction: @options[:is_formatting_instruction],
         annotate_links: @options[:annotate_links],
+        vendor_multimodal_api_key: @options[:vendor_multimodal_api_key],
+        use_vendor_multimodal_model: @options[:use_vendor_multimodal_model],
+        vendor_multimodal_model_name: @options[:vendor_multimodal_model_name],
+        webhook_url: @options[:webhook_url],
+        http_proxy: @options[:http_proxy],
+        azure_openai_deployment_name: @options[:azure_openai_deployment_name],
+        azure_openai_endpoint: @options[:azure_openai_endpoint],
+        azure_openai_api_version: @options[:azure_openai_api_version],
+        azure_openai_key: @options[:azure_openai_key],
         from_ruby_package: true
       }
-
-      params[:page_separator] = @options[:page_separator] if @options[:page_separator]
-      params[:page_prefix] = @options[:page_prefix] if @options[:page_prefix]
-      params[:page_suffix] = @options[:page_suffix] if @options[:page_suffix]
-      params[:bounding_box] = @options[:bounding_box] if @options[:bounding_box]
-      params[:target_pages] = @options[:target_pages] if @options[:target_pages]
-      params[:webhook_url] = @options[:webhook_url] if @options[:webhook_url]
-      params[:azure_openai_deployment_name] = @options[:azure_openai_deployment_name] if @options[:azure_openai_deployment_name]
-      params[:azure_openai_endpoint] = @options[:azure_openai_endpoint] if @options[:azure_openai_endpoint]
-      params[:azure_openai_api_version] = @options[:azure_openai_api_version] if @options[:azure_openai_api_version]
-      params[:azure_openai_key] = @options[:azure_openai_key] if @options[:azure_openai_key]
-      params[:http_proxy] = @options[:http_proxy] if @options[:http_proxy]
 
       if url
         params[:input_url] = url.to_s
@@ -357,29 +356,7 @@ module Llamaparserb
         req.headers["Authorization"] = "Bearer #{api_key}"
         req.headers["Accept"] = "application/json"
         req.options.timeout = 30
-        req.body = {
-          input_url: url.to_s,
-          language: @options[:language].to_s,
-          parsing_instruction: @options[:parsing_instruction],
-          invalidate_cache: @options[:invalidate_cache],
-          skip_diagonal_text: @options[:skip_diagonal_text],
-          do_not_cache: @options[:do_not_cache],
-          fast_mode: @options[:fast_mode],
-          premium_mode: @options[:premium_mode],
-          continuous_mode: @options[:continuous_mode],
-          do_not_unroll_columns: @options[:do_not_unroll_columns],
-          gpt4o_mode: @options[:gpt4o_mode],
-          gpt4o_api_key: @options[:gpt4o_api_key],
-          vendor_multimodal_api_key: @options[:vendor_multimodal_api_key],
-          use_vendor_multimodal_model: @options[:use_vendor_multimodal_model],
-          vendor_multimodal_model_name: @options[:vendor_multimodal_model_name],
-          take_screenshot: @options[:take_screenshot],
-          disable_ocr: @options[:disable_ocr],
-          guess_xlsx_sheet_names: @options[:guess_xlsx_sheet_names],
-          is_formatting_instruction: @options[:is_formatting_instruction],
-          annotate_links: @options[:annotate_links],
-          from_ruby_package: true
-        }.compact
+        req.body = upload_params(nil, url)
       end
 
       log "Response: #{response.body.inspect}", :debug
