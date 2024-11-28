@@ -168,10 +168,10 @@ module Llamaparserb
 
     def handle_error(error, file_input)
       if @options[:ignore_errors]
-        safe_message = if file_input.is_a?(String) && !File.exist?(file_input)
-          "binary data"
+        safe_message = if file_input.is_a?(String) && file_input.start_with?("/")
+          "file path: #{file_input}"
         else
-          file_input.class.to_s
+          "binary data"
         end
 
         log "Error while parsing file (#{safe_message}): #{error.message}", :error
