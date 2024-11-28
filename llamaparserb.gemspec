@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email = ["heidar@horizing.io"]
 
   spec.summary = "A llamaparse client for Ruby."
-  spec.description = "A llamaparse client for Ruby."
+  spec.description = "A llamaparse client for Ruby. Loosely based on the Python version from llamaparse."
   spec.homepage = "https://github.com/horizing/llamaparserb"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
