@@ -8,6 +8,7 @@ require "mime/types"
 require "uri"
 require "async"
 require "logger"
+require "tempfile"
 
 module Llamaparserb
   class Error < StandardError; end
@@ -41,17 +42,27 @@ module Llamaparserb
       @connection = build_connection
     end
 
-    def parse_file(file_path)
-      job_id = create_job(file_path)
-      log "Started parsing file under job_id #{job_id}", :info
+    def parse_file(file_input, file_type = nil)
+      case file_input
+      when String
+        # Treat as file path
+        job_id = create_job_from_path(file_input)
+        log "Started parsing file under job_id #{job_id}", :info
+      when IO, StringIO, Tempfile
+        # Treat as file object
+        raise Error, "file_type parameter is required for IO objects" unless file_type
+        job_id = create_job_from_io(file_input, file_type)
+        log "Started parsing in-memory file under job_id #{job_id}", :info
+      else
+        raise Error, "Invalid input type. Expected String (file path) or IO object, got #{file_input.class}"
+      end
 
       wait_for_completion(job_id)
-
       result = get_result(job_id)
       log "Successfully retrieved result", :info
       result
     rescue => e
-      handle_error(e, file_path)
+      handle_error(e, file_input)
     end
 
     private
@@ -144,9 +155,9 @@ module Llamaparserb
       end
     end
 
-    def handle_error(error, file_path)
+    def handle_error(error, file_input)
       if @options[:ignore_errors]
-        log "Error while parsing file '#{file_path}': #{error.message}", :error
+        log "Error while parsing file '#{file_input}'", :error
         nil
       else
         raise error
@@ -163,14 +174,37 @@ module Llamaparserb
       end
     end
 
-    def create_job(file_path)
+    def create_job_from_path(file_path)
       validate_file_type!(file_path)
-
       file = Faraday::Multipart::FilePart.new(
         file_path,
         detect_content_type(file_path)
       )
+      create_job(file)
+    end
 
+    def create_job_from_io(io, file_type)
+      # Ensure file_type starts with a dot
+      file_type = ".#{file_type}" unless file_type.start_with?(".")
+      validate_file_type!(file_type)
+
+      temp_file = Tempfile.new(["upload", file_type])
+      temp_file.binmode
+      io.rewind
+      temp_file.write(io.read)
+      temp_file.rewind
+
+      file = Faraday::Multipart::FilePart.new(
+        temp_file,
+        detect_content_type(temp_file.path)
+      )
+      create_job(file)
+    ensure
+      temp_file&.close
+      temp_file&.unlink
+    end
+
+    def create_job(file)
       response = @connection.post("upload") do |req|
         req.headers["Authorization"] = "Bearer #{api_key}"
         req.body = upload_params(file)

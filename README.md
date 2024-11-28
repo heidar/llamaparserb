@@ -32,12 +32,41 @@ require 'llamaparserb'
 # Initialize client with API key
 client = Llamaparserb::Client.new(ENV['LLAMA_CLOUD_API_KEY'])
 
-# Parse a file to text (default)
+# Parse a file from disk (to text by default)
 text = client.parse_file('path/to/document.pdf')
+
+# Parse an in-memory file (requires file type)
+require 'open-uri'
+file_content = URI.open('https://example.com/document.pdf')
+text = client.parse_file(file_content, 'pdf')
 
 # Parse a file to markdown
 client = Llamaparserb::Client.new(ENV['LLAMA_CLOUD_API_KEY'], result_type: "markdown")
 markdown = client.parse_file('path/to/document.pdf')
+```
+
+### File Input Options
+
+The `parse_file` method accepts two types of inputs:
+
+1. File path (String):
+```ruby
+client.parse_file('path/to/document.pdf')
+```
+
+2. IO object (requires file type parameter):
+```ruby
+# From a URL
+file_content = URI.open('https://example.com/document.pdf')
+client.parse_file(file_content, 'pdf')
+
+# From memory
+io = StringIO.new(file_content)
+client.parse_file(io, 'pdf')
+
+# From a Tempfile
+temp_file = Tempfile.new(['document', '.pdf'])
+client.parse_file(temp_file, 'pdf')
 ```
 
 ### Advanced Options
