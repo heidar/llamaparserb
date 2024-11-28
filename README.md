@@ -75,18 +75,111 @@ client.parse_file(temp_file, 'pdf')
 client = Llamaparserb::Client.new(
   ENV['LLAMA_CLOUD_API_KEY'],
   {
-    result_type: "markdown",  # Output format: "text" or "markdown"
-    num_workers: 4,           # Number of workers for concurrent processing
-    check_interval: 1,        # How often to check job status (seconds)
-    max_timeout: 2000,        # Maximum time to wait for parsing (seconds)
-    verbose: true,            # Enable detailed logging
-    language: :en,            # Target language
-    parsing_instruction: "",  # Custom parsing instructions
-    premium_mode: false,      # Enable premium parsing features
-    split_by_page: true       # Split result by pages
+    # Basic Configuration
+    result_type: "markdown",    # Output format: "text" or "markdown"
+    num_workers: 4,             # Number of workers for concurrent processing
+    check_interval: 1,          # How often to check job status (seconds)
+    max_timeout: 2000,          # Maximum time to wait for parsing (seconds)
+    verbose: true,              # Enable detailed logging
+    show_progress: true,        # Show progress during parsing
+    ignore_errors: true,        # Return nil instead of raising errors
+    
+    # Language and Parsing Options
+    language: :en,              # Target language for parsing
+    parsing_instruction: "",    # Custom parsing instructions
+    skip_diagonal_text: false,  # Skip diagonal text in documents
+    invalidate_cache: false,    # Force reprocessing of cached documents
+    do_not_cache: false,        # Disable caching of results
+    
+    # Processing Modes
+    fast_mode: false,          # Enable faster processing (may reduce quality)
+    premium_mode: false,       # Enable premium parsing features
+    continuous_mode: false,    # Process document as continuous text
+    do_not_unroll_columns: false, # Keep columnar text structure
+    
+    # Page Handling
+    split_by_page: true,       # Split result by pages
+    page_separator: "\n\n",    # Custom page separator
+    page_prefix: "Page ",      # Text to prepend to each page
+    page_suffix: "\n",         # Text to append to each page
+    target_pages: [1,2,3],     # Array of specific pages to process
+    bounding_box: {            # Specify area to parse (coordinates in pixels)
+      x1: 0, y1: 0,           # Top-left corner
+      x2: 612, y2: 792        # Bottom-right corner
+    },
+    
+    # OCR and Image Processing
+    disable_ocr: false,        # Disable Optical Character Recognition
+    take_screenshot: false,    # Capture screenshot of document
+    
+    # Advanced Processing Features
+    gpt4o_mode: false,         # Enable GPT-4 Optimization mode
+    gpt4o_api_key: "key",      # API key for GPT-4 Optimization
+    guess_xlsx_sheet_names: false, # Attempt to guess Excel sheet names
+    is_formatting_instruction: false, # Use formatting instructions
+    annotate_links: false,     # Include link annotations in output
+    
+    # Multimodal Processing
+    vendor_multimodal_api_key: "key",      # API key for multimodal processing
+    use_vendor_multimodal_model: false,     # Enable multimodal model
+    vendor_multimodal_model_name: "model",  # Specify multimodal model
+    
+    # Integration Options
+    webhook_url: "https://...", # URL for webhook notifications
+    http_proxy: "http://...",   # HTTP proxy configuration
+    
+    # Azure OpenAI Configuration
+    azure_openai_deployment_name: "deployment", # Azure OpenAI deployment name
+    azure_openai_endpoint: "endpoint",         # Azure OpenAI endpoint
+    azure_openai_api_version: "2023-05-15",    # Azure OpenAI API version
+    azure_openai_key: "key"                    # Azure OpenAI API key
   }
 )
 ```
+
+### Feature-Specific Options
+
+#### Page Processing
+- `split_by_page`: Split the document into separate pages
+- `page_separator`: Custom text to insert between pages
+- `page_prefix`/`page_suffix`: Add custom text before/after each page
+- `target_pages`: Process only specific pages
+- `bounding_box`: Parse only a specific area of the document
+
+#### OCR and Image Processing
+- `disable_ocr`: Turn off Optical Character Recognition
+- `take_screenshot`: Generate document screenshots
+- `skip_diagonal_text`: Ignore text at diagonal angles
+
+#### Advanced Processing
+- `continuous_mode`: Process text as a continuous stream
+- `do_not_unroll_columns`: Preserve column structure
+- `guess_xlsx_sheet_names`: Auto-detect Excel sheet names
+- `annotate_links`: Include document hyperlinks in output
+- `is_formatting_instruction`: Use special formatting instructions
+
+#### Performance Options
+- `fast_mode`: Faster processing with potential quality trade-offs
+- `premium_mode`: Access to premium features
+- `invalidate_cache`/`do_not_cache`: Control result caching
+- `num_workers`: Configure concurrent processing
+
+#### Integration Features
+- `webhook_url`: Receive processing notifications
+- `http_proxy`: Configure proxy settings
+
+#### Azure OpenAI Integration
+Configure Azure OpenAI services with:
+- `azure_openai_deployment_name`
+- `azure_openai_endpoint`
+- `azure_openai_api_version`
+- `azure_openai_key`
+
+#### Multimodal Processing
+Enable advanced multimodal processing with:
+- `vendor_multimodal_api_key`
+- `use_vendor_multimodal_model`
+- `vendor_multimodal_model_name`
 
 ### Supported File Types
 

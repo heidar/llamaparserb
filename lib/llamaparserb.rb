@@ -100,7 +100,20 @@ module Llamaparserb
         bounding_box: nil,
         target_pages: nil,
         ignore_errors: true,
-        split_by_page: true
+        split_by_page: true,
+        vendor_multimodal_api_key: nil,
+        use_vendor_multimodal_model: false,
+        vendor_multimodal_model_name: nil,
+        take_screenshot: false,
+        disable_ocr: false,
+        is_formatting_instruction: false,
+        annotate_links: false,
+        webhook_url: nil,
+        azure_openai_deployment_name: nil,
+        azure_openai_endpoint: nil,
+        azure_openai_api_version: nil,
+        azure_openai_key: nil,
+        http_proxy: nil
       }
     end
 
@@ -237,7 +250,7 @@ module Llamaparserb
     end
 
     def upload_params(file)
-      {
+      params = {
         file: file,
         language: @options[:language].to_s,
         parsing_instruction: @options[:parsing_instruction],
@@ -250,8 +263,30 @@ module Llamaparserb
         do_not_unroll_columns: @options[:do_not_unroll_columns],
         gpt4o_mode: @options[:gpt4o_mode],
         gpt4o_api_key: @options[:gpt4o_api_key],
+        vendor_multimodal_api_key: @options[:vendor_multimodal_api_key],
+        use_vendor_multimodal_model: @options[:use_vendor_multimodal_model],
+        vendor_multimodal_model_name: @options[:vendor_multimodal_model_name],
+        take_screenshot: @options[:take_screenshot],
+        disable_ocr: @options[:disable_ocr],
+        guess_xlsx_sheet_names: @options[:guess_xlsx_sheet_names],
+        is_formatting_instruction: @options[:is_formatting_instruction],
+        annotate_links: @options[:annotate_links],
         from_ruby_package: true
-      }.compact
+      }
+
+      params[:page_separator] = @options[:page_separator] if @options[:page_separator]
+      params[:page_prefix] = @options[:page_prefix] if @options[:page_prefix]
+      params[:page_suffix] = @options[:page_suffix] if @options[:page_suffix]
+      params[:bounding_box] = @options[:bounding_box] if @options[:bounding_box]
+      params[:target_pages] = @options[:target_pages] if @options[:target_pages]
+      params[:webhook_url] = @options[:webhook_url] if @options[:webhook_url]
+      params[:azure_openai_deployment_name] = @options[:azure_openai_deployment_name] if @options[:azure_openai_deployment_name]
+      params[:azure_openai_endpoint] = @options[:azure_openai_endpoint] if @options[:azure_openai_endpoint]
+      params[:azure_openai_api_version] = @options[:azure_openai_api_version] if @options[:azure_openai_api_version]
+      params[:azure_openai_key] = @options[:azure_openai_key] if @options[:azure_openai_key]
+      params[:http_proxy] = @options[:http_proxy] if @options[:http_proxy]
+
+      params.compact
     end
 
     def get_job_status(job_id)
