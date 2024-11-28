@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    llamaparserb (0.1.0)
+    llamaparserb (0.2.0)
       async (~> 2.0)
       faraday (~> 2.0)
       faraday-multipart (~> 1.0)

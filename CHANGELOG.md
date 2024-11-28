@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2024-11-28
+### Changed
+- Allow passing in a string or an IO object to `parse_file`
+- Add support for file type parameter to `parse_file`
+
 ## [0.1.1] - 2024-11-28
 ### Changed
 - Move gem ownership to Horizing
