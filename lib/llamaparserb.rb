@@ -51,6 +51,9 @@ module Llamaparserb
         elsif File.exist?(file_input)
           job_id = create_job_from_path(file_input)
           log "Started parsing file under job_id #{job_id}", :info
+        elsif URI::DEFAULT_PARSER.make_regexp.match?(file_input)
+          job_id = create_job_from_url(file_input)
+          log "Started parsing URL under job_id #{job_id}", :info
         else
           raise Error, "file_type parameter is required for binary string input"
         end
@@ -197,7 +200,7 @@ module Llamaparserb
     def build_connection
       Faraday.new(url: base_url) do |f|
         f.request :multipart
-        f.request :json
+        f.request :url_encoded
         f.response :json
         f.response :raise_error
         f.adapter Faraday.default_adapter
@@ -234,7 +237,13 @@ module Llamaparserb
         temp_file,
         detect_content_type(temp_file.path)
       )
-      create_job(file)
+
+      response = @connection.post("upload") do |req|
+        req.headers["Authorization"] = "Bearer #{api_key}"
+        req.body = {file: file}
+      end
+
+      response.body["id"]
     ensure
       temp_file&.close
       temp_file&.unlink
@@ -249,9 +258,8 @@ module Llamaparserb
       response.body["id"]
     end
 
-    def upload_params(file)
+    def upload_params(file = nil, url = nil)
       params = {
-        file: file,
         language: @options[:language].to_s,
         parsing_instruction: @options[:parsing_instruction],
         invalidate_cache: @options[:invalidate_cache],
@@ -285,6 +293,12 @@ module Llamaparserb
       params[:azure_openai_api_version] = @options[:azure_openai_api_version] if @options[:azure_openai_api_version]
       params[:azure_openai_key] = @options[:azure_openai_key] if @options[:azure_openai_key]
       params[:http_proxy] = @options[:http_proxy] if @options[:http_proxy]
+
+      if url
+        params[:input_url] = url.to_s
+      elsif file
+        params[:file] = file
+      end
 
       params.compact
     end
@@ -334,6 +348,21 @@ module Llamaparserb
       unless SUPPORTED_FILE_TYPES.include?(extension)
         raise Error, "Unsupported file type: #{extension}. Supported types: #{SUPPORTED_FILE_TYPES.join(", ")}"
       end
+    end
+
+    def create_job_from_url(url)
+      log "Creating job from URL: #{url}", :debug
+
+      response = @connection.post("upload") do |req|
+        req.headers["Authorization"] = "Bearer #{api_key}"
+        req.headers["Accept"] = "application/json"
+        # Create a simple form data request
+        req.options.timeout = 30  # Optional: add timeout
+        req.body = {"input_url" => url.to_s}
+      end
+
+      log "Response: #{response.body.inspect}", :debug
+      response.body["id"]
     end
   end
 end

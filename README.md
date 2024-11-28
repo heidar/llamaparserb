@@ -43,11 +43,14 @@ text = client.parse_file(file_content, 'pdf')
 # Parse a file to markdown
 client = Llamaparserb::Client.new(ENV['LLAMA_CLOUD_API_KEY'], result_type: "markdown")
 markdown = client.parse_file('path/to/document.pdf')
+
+# Parse a file from a URL
+markdown = client.parse_file('https://example.com/document.pdf')
 ```
 
 ### File Input Options
 
-The `parse_file` method accepts two types of inputs:
+The `parse_file` method accepts three types of inputs:
 
 1. File path (String):
 ```ruby
@@ -67,6 +70,11 @@ client.parse_file(io, 'pdf')
 # From a Tempfile
 temp_file = Tempfile.new(['document', '.pdf'])
 client.parse_file(temp_file, 'pdf')
+```
+
+3. URL (String):
+```ruby
+client.parse_file('https://example.com/document.pdf')
 ```
 
 ### Advanced Options
