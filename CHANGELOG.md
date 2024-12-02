@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Add support for `disable_image_extraction`
+
+## [0.3.1] - 2024-11-28
 - Add support for all supported optional llamaparse parameters when parsing files from URLs
 
 ## [0.3.0] - 2024-11-28

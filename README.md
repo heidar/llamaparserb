@@ -118,6 +118,7 @@ client = Llamaparserb::Client.new(
     
     # OCR and Image Processing
     disable_ocr: false,        # Disable Optical Character Recognition
+    disable_image_extraction: false, # Disable image extraction from documents
     take_screenshot: false,    # Capture screenshot of document
     
     # Advanced Processing Features
@@ -156,6 +157,7 @@ client = Llamaparserb::Client.new(
 
 #### OCR and Image Processing
 - `disable_ocr`: Turn off Optical Character Recognition
+- `disable_image_extraction`: Disable image extraction from documents
 - `take_screenshot`: Generate document screenshots
 - `skip_diagonal_text`: Ignore text at diagonal angles
 
