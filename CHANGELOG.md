@@ -14,30 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add support for `disable_image_extraction`
 
-[0.3.2]: https://github.com/horizing/llamaparserb/releases/tag/v0.3.2...v0.3.1
-
 ## [0.3.1] - 2024-11-28
 - Add support for all supported optional llamaparse parameters when parsing files from URLs
-
-[0.3.1]: https://github.com/horizing/llamaparserb/releases/tag/v0.3.1...v0.3.0
 
 ## [0.3.0] - 2024-11-28
 ### Added
 - Add support for parsing files from URLs
 
-[0.3.0]: https://github.com/horizing/llamaparserb/releases/tag/v0.3.0...v0.2.3
-
 ## [0.2.3] - 2024-11-28
 ### Added
 - Add support for all supported optional llamaparse parameters to `parse_file`
 
-[0.2.3]: https://github.com/horizing/llamaparserb/releases/tag/v0.2.3...v0.2.2
-
 ## [0.2.2] - 2024-11-28
 ### Fixed
 - Fix issue with handling file path
-
-[0.2.2]: https://github.com/horizing/llamaparserb/releases/tag/v0.2.2
 
 ## [0.2.1] - 2024-11-28
 ### Fixed
@@ -50,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2024-11-28
 ### Changed
-- Move gem ownership to Horizing
+- Move gem ownership
 
 ## [0.1.0] - 2024-11-27
 ### Added
